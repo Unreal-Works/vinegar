@@ -125,13 +125,31 @@ func (a *app) commandLine(_ gio.Application, clPtr uintptr) int {
 
 	cl := gio.ApplicationCommandLineNewFromInternalPtr(clPtr)
 	args := cl.GetArguments(nil)[1:] // skip argv0
-	if len(args) >= 1 && args[0] == "run" {
-		args = args[1:] // skip 'run' cmd
+	var isSetup bool
+	var isRun bool
+	if len(args) >= 1 && (args[0] == "run" || args[0] == "setup") {
+		isSetup = args[0] == "setup"
+		isRun = args[0] == "run"
+		args = args[1:] // skip 'run' or 'setup' cmd
 	}
 
 	// Override arguments to prioritize welcome screen
-	if !a.pfx.Exists() {
+	if !a.pfx.Exists() && !isSetup && !isRun {
 		args = []string{"manage"}
+	}
+
+	if isSetup {
+		a.Hold()
+		go func() {
+			defer a.Release()
+			if err := a.boot.setupExecute(); err != nil {
+				slog.Error("Setup failed", "err", err)
+				os.Exit(1)
+			}
+			slog.Info("Setup successful!")
+			a.Quit()
+		}()
+		return 0
 	}
 
 	if len(args) == 1 && args[0] == "manage" {
