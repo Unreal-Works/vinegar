@@ -142,12 +142,12 @@ func (a *app) commandLine(_ gio.Application, clPtr uintptr) int {
 		a.Hold()
 		go func() {
 			defer a.Release()
-			if err := a.boot.setupExecute(); err != nil {
+			if err := a.boot.setup(); err != nil {
 				slog.Error("Setup failed", "err", err)
 				os.Exit(1)
 			}
 			slog.Info("Setup successful!")
-			a.Quit()
+			gutil.IdleAdd(func() { a.Quit() })
 		}()
 		return 0
 	}
